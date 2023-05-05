@@ -21,9 +21,10 @@ type Store struct {
 
 // add authservice to this
 type Server struct {
-	Store  *Store
-	Router *chi.Mux
-	Srvr   *http.Server
+	Store       *Store
+	Router      *chi.Mux
+	Srvr        *http.Server
+	AuthService AuthService
 	//maybe some other stuff?
 }
 
@@ -87,11 +88,62 @@ func (s Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello, World"))
 }
 
-// register handlers
+func (s Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var u *User
+
+	err := json.NewDecoder(r.Body).Decode(&u)
+
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if ValidateUser(u, s.Store.Users); err != nil {
+		writeJSON(w, http.StatusBadRequest, err)
+		return
+	}
+
+	a := s.AuthService.CreateAuth(u)
+
+	if s.AuthService.GenerateToken(a); err != nil {
+		writeJSON(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	//i don't think I need this
+	// exp := a.Expires.Unix() - time.Now().Unix()
+
+	cookie := http.Cookie{
+		Name:     "eeauth",
+		Value:    a.Token,
+		Path:     "/",
+		MaxAge:   7200,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	http.SetCookie(w, &cookie)
+
+	w.Write([]byte("logged in!"))
+}
+
+// welcome handler
+func (s Server) handleWelcome(w http.ResponseWriter, r *http.Request) {
+	claims := r.Context().Value("eeclaims").(*CustomClaims)
+
+	msg := "Welcome " + claims.Username
+
+	w.Write([]byte(msg))
+}
+
+// register routes
 func (s Server) RegisterRoutes() {
 	s.Router.Get("/", s.handleIndex)
 	s.Router.Post("/register", s.handleCreateNewUser)
 	s.Router.Get("/users", s.handleGetUsers)
+	s.Router.Post("/login", s.handleLogin)
+	s.Router.Get("/o/welcome", s.AuthService.MiddlewareJWT(s.handleWelcome))
 }
 
 // writeJSON helper
