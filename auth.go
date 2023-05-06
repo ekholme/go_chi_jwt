@@ -88,35 +88,7 @@ func (as AuthService) ValidateToken(tokenStr string) (*jwt.Token, error) {
 	return tkn, nil
 }
 
-// func (as AuthService) MiddlewareJWT(next http.Handler) http.Handler {
-// 	// see this demo https://hackernoon.com/creating-a-middleware-in-golang-for-jwt-based-authentication-cx3f32z8
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		cookie, err := r.Cookie("eeauth")
-
-// 		if err != nil {
-// 			switch {
-// 			case errors.Is(err, http.ErrNoCookie):
-// 				writeJSON(w, http.StatusBadRequest, err)
-// 			default:
-// 				writeJSON(w, http.StatusInternalServerError, err)
-// 			}
-// 			return
-// 		}
-
-// 		token, err := as.ValidateToken(cookie.Value)
-
-// 		if err != nil {
-// 			writeJSON(w, http.StatusUnauthorized, err)
-// 		}
-
-// 		if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
-// 			ctx := context.WithValue(r.Context(), "eeclaims", claims)
-
-// 			next.ServeHTTP(w, r.WithContext(ctx))
-// 		}
-// 	})
-// }
-
+// this probably doesn't need to be part of the authservice, but w/e
 func (as AuthService) MiddlewareJWT(next http.HandlerFunc) http.HandlerFunc {
 	// see this demo https://hackernoon.com/creating-a-middleware-in-golang-for-jwt-based-authentication-cx3f32z8
 	return func(w http.ResponseWriter, r *http.Request) {
